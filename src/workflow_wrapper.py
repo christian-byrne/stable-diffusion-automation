@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import time
+import logging
 
 
 class ComfyAPIWorkflow:
@@ -8,6 +9,7 @@ class ComfyAPIWorkflow:
         self,
         workflow_template_path: Path,
         name: str = "copy",
+        log_level: int = logging.DEBUG,
     ):
         """
         Initializes a ComfyAPIWorkflow instance. The workflow should be a JSON file that was saved using
@@ -16,15 +18,19 @@ class ComfyAPIWorkflow:
         Args:
           workflow_template_path (Path): The path to the workflow template JSON file (API version).
           name (str): The name of the workflow, if saving a new version to disk. Defaults to "copy".
+          log_level (int, optional): The logging level (verbosity). Defaults to logging.DEBUG.
 
         Attributes:
-          workflow_template_path (Path): The path to the workflow template JSON file.
-          name (str): The name of the workflow, if saving a new version to disk.
           filename (str): The name of the workflow file.
-          workflows_dir (Path): The directory where the workflow file is located.
+          workflows_dir (Path): The directory where the workflow files are located.
           path (Path): The full path to the workflow file.
-          logfile_path (Path): The path to the log file.
           workflow_dict (dict): The workflow data.
+
+        Methods:
+          save: Saves a new copy of the workflow as a json file in the same directory as the template.
+          update: Update one of the inputs of a node in the workflow dict.
+          get_workflow_dict: Returns the workflow as a dict.
+          parse_node_name: Accepts the data dict from a response from the comfy server and returns the name of the node that the data is about.
 
         Raises:
           FileNotFoundError: If the workflow template JSON file could not be found at the given path.
@@ -42,37 +48,12 @@ class ComfyAPIWorkflow:
         self.__set_node_mappings()
         self.save()
 
-        self.logfile_path = None
-        self.log(
-            "\nCreated Copy of Workflow Template in",
-            self.workflow_template_path.parent,
-            "\n"
+        self.logger = logging.getLogger("Workflow")
+        self.logger.setLevel(log_level)
+        self.__setup_logging()
+        self.logger.info(
+            f"Created Copy of Workflow Template in {self.workflow_template_path.parent}\n"
         )
-
-    def log(self, *args, **kwargs):
-        """
-        Logs the provided arguments to the console and the log file.
-
-        Args:
-          *args: Variable length argument list.
-          **kwargs: Arbitrary keyword arguments.
-        """
-        # Add your own logging logic
-        print(*args, **kwargs)
-
-        if not self.logfile_path:
-            self.logfile_path = (
-                (Path(__file__).parent.parent)
-                / "logs"
-                / f"comfy_workflow_wrapper_{time.strftime('%Y-%m-%d_%H:%M:%S')}.log"
-            )
-            with open(self.logfile_path, "w") as f:
-                f.write(
-                    f"Comfy Workflow Instance Created at {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                )
-
-        with open(self.logfile_path, "a") as f:
-            print(*args, **kwargs, file=f)
 
     def save(self):
         """
@@ -110,11 +91,10 @@ class ComfyAPIWorkflow:
             )
 
         if "image" in key.lower():
-            print(
-                "\nKeep in mind that the image inputs are just filenames, not full paths.",
-                "The path is assumed to be the comfy input image directory"
-                "(which should be manually set to whatever folder you need before passing this workflow to a comfy client)\n",
-                sep="\n",
+            self.logger.warning(
+                "Keep in mind that the image inputs are just filenames, not full paths."
+                + "\nThe path is assumed to be the comfy input image directory"
+                + "\n(which should be manually set to whatever folder you need before passing this workflow to a comfy client)\n"
             )
         if key not in self.workflow_dict[index]["inputs"].keys():
             raise KeyError(
@@ -123,25 +103,21 @@ class ComfyAPIWorkflow:
             )
 
         if self.workflow_dict[index]["inputs"][key] == value:
-            self.log(
+            self.logger.warning(
                 f"{node_name}'s {key} value is already set to: {value}",
             )
             return
 
         if append:
-            self.log(
-                f"{node_name}'s {key} Value Appended with:",
-                value,
-            )
+            self.logger.info(f"{node_name}'s {key} Value Appended with: {value}")
             # Try to add a space between the old and new value
             try:
                 self.workflow_dict[index]["inputs"][key] += " " + value
             except TypeError:
                 self.workflow_dict[index]["inputs"][key] += value
         else:
-            self.log(
-                f"Updating {node_name}'s {key} value:",
-                f"from {self.workflow_dict[index]['inputs'][key]} to {value}",
+            self.logger.info(
+                f"Updating {node_name}'s {key} value: from {self.workflow_dict[index]['inputs'][key]} to {value}"
             )
             self.workflow_dict[index]["inputs"][key] = value
         if save_after:
@@ -149,8 +125,6 @@ class ComfyAPIWorkflow:
 
     def get_workflow_dict(self):
         """
-        Returns the workflow dictionary.
-
         Returns:
           dict: The workflow dictionary.
         """
@@ -174,6 +148,9 @@ class ComfyAPIWorkflow:
             try:
                 node_name = self.workflow_dict[node_index]["class_type"]
             except KeyError:
+                self.logger.debug(
+                    f"Could not find the node name for node index {node_index} in the workflow dict"
+                )
                 node_name = "Unknown"
         return node_name
 
@@ -204,3 +181,24 @@ class ComfyAPIWorkflow:
                 self.__node_titles[node["_meta"]["title"]] = node_index
             if "class_type" in node.keys():
                 self.__node_class_types[node["class_type"]] = node_index
+
+    def __setup_logging(self):
+        self.__logfile_path = (
+            (Path(__file__).parent.parent)
+            / "logs"
+            / f"comfy_workflow_{time.strftime('%Y-%m-%d_%H:%M:%S')}.log"
+        )
+        self.__logfile_path.parent.mkdir(parents=True, exist_ok=True)
+        formatter = logging.Formatter(
+            "[%(asctime)s] [%(levelname)s]"
+            + f" [Workflow - {self.name}] "
+            + "%(message)s",
+            datefmt="%H:%M:%S",
+        )
+        filehandler = logging.FileHandler(self.__logfile_path)
+        filehandler.setFormatter(formatter)
+        self.logger.addHandler(filehandler)
+
+        streamhandler = logging.StreamHandler()
+        streamhandler.setFormatter(formatter)
+        self.logger.addHandler(streamhandler)

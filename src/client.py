@@ -3,6 +3,7 @@ from urllib import request
 import uuid
 from pathlib import Path
 import time
+import logging
 
 try:
     import websocket
@@ -28,24 +29,14 @@ class ComfyClient:
       port (int, optional): The port number to connect to the Comfy server. Defaults to 8188.
 
     Attributes:
-      workflow (Workflow): The workflow object representing the desired workflow to be executed.
-      port (int): The port number to connect to the Comfy server.
-      server_url (str): The URL of the Comfy server.
       websock_url (str): The WebSocket URL of the Comfy server.
       client_id (str): The unique identifier for the client.
-      __websocket (WebSocket): The WebSocket connection object.
       logfile_path (str): The path to the log file.
 
     Methods:
-      log: Logs a message and writes it to the log file.
-      is_connected: Checks if the client is currently connected to the server.
       connect: Connects to the Comfy server using a WebSocket connection.
       disconnect: Disconnects from the Comfy server by closing the WebSocket connection.
       queue_workflow: Queues a workflow by sending a request to the Comfy API server and waits for it to complete.
-      __get_request_data: Returns the request data as a JSON-encoded string.
-      __send_request: Sends a request to the Comfy API server.
-      __handle_response_message: Handles the response message received from the server.
-      __listen_until_complete: Listens for response messages until the workflow execution is complete.
     """
 
     def __init__(
@@ -54,6 +45,7 @@ class ComfyClient:
         server_url: str = "http://localhost",
         max_connect_attempts: int = 10,
         port: int = 8188,
+        log_level: int = logging.DEBUG,
     ):
         self.workflow = workflow
         self.port = port
@@ -68,27 +60,15 @@ class ComfyClient:
             self.websock_url = f"ws://{self.server_url}"
 
         self.client_id = str(uuid.uuid4())
+        self.client_id_truncated = self.client_id.split("-")[0]
         self.__websocket = None
-        self.logfile_path = None
-        self.log(f"New Client - ID: {self.client_id}")
 
-    def log(self, *args, **kwargs):
-        # Add your own logging logic
-        print(f"[Client {self.client_id}]", *args, **kwargs)
-
-        if not self.logfile_path:
-            self.logfile_path = (
-                (Path(__file__).parent.parent)
-                / "logs"
-                / f"comfy_client_{time.strftime('%Y-%m-%d_%H:%M:%S')}.log"
-            )
-            with open(self.logfile_path, "w") as f:
-                f.write(
-                    f"New Comfy Client Created at {time.strftime('%Y-%m-%d_%H:%M:%S')}\n"
-                )
-
-        with open(self.logfile_path, "a") as f:
-            print(*args, **kwargs, file=f)
+        self.logger = logging.getLogger("Client")
+        self.logger.setLevel(log_level)
+        self.__setup_logging()
+        self.logger.info(
+            f"New Comfy Client Created at {time.strftime('%Y-%m-%d_%H:%M:%S')}\n"
+        )
 
     def is_connected(self):
         """
@@ -119,16 +99,15 @@ class ComfyClient:
                     f"{self.websock_url}/ws?clientId={self.client_id}",
                 )
             except ConnectionRefusedError:
-                self.log(
+                self.logger.debug(
                     f"Connection Attempt {attempt + 1}/{self.max_connect_attempts}: Failed - Connection Refused"
                 )
                 time.sleep(1)
                 continue
 
             if self.__websocket.connected:
-                self.log(
-                    f"Connection Attempt {attempt + 1}/{self.max_connect_attempts}:",
-                    "Succeeded - Connection Established\n",
+                self.logger.info(
+                    f"Connection Attempt {attempt + 1}/{self.max_connect_attempts}: Succeeded - Connection Established\n"
                 )
                 break
 
@@ -143,12 +122,10 @@ class ComfyClient:
             None
         """
         if self.is_connected():
-            self.log(
-                "Disconnecting Client from Comfy server\n"
-            )
+            self.logger.info("Disconnecting Client from Comfy server\n")
             self.__websocket.close()
         else:
-            self.log(
+            self.logger.info(
                 "Disconnect Client Attempt: Client is already disconnected\n"
             )
 
@@ -169,7 +146,7 @@ class ComfyClient:
 
         try:
             start_time_epoch = time.time()
-            self.log(f"Queueing Workflow at: {time.strftime('%I:%M%p')}")
+            self.logger.info(f"Queueing Workflow at: {time.strftime('%I:%M%p')}")
 
             self.__send_request()
             self.__listen_until_complete()
@@ -177,12 +154,12 @@ class ComfyClient:
             time_diff_formatted = time.strftime(
                 "%Mmin, %Ssec", time.gmtime(time.time() - start_time_epoch)
             )
-            self.log(
+            self.logger.info(
                 f"ComfyUI Server finished processing request at: {time.strftime('%I:%M%p')} (Time elapsed - {time_diff_formatted})"
             )
 
         except Exception as e:
-            self.log(f"Error with Comfy API Client process: {e}")
+            self.logger.error(f"Error with Comfy API Client process: {e}")
             raise e
         finally:
             self.__websocket.close()
@@ -201,13 +178,13 @@ class ComfyClient:
 
     def __handle_response_message(self, message):
         if message["type"] == "status":
-            self.log(message["data"]["status"])
+            self.logger.debug(message["data"]["status"])
         elif message["type"] == "progress":
             # Can add progress bar printing here
             pass
         elif message["type"] == "executing":
             cur_node_name = self.workflow.parse_node_name(message["data"])
-            self.log(f"Executing Node: {cur_node_name}")
+            self.logger.info(f"Executing Node: {cur_node_name}")
 
             if (
                 message["data"]["node"] is None
@@ -223,3 +200,24 @@ class ComfyClient:
                 message = json.loads(out)
                 if self.__handle_response_message(message):
                     break
+
+    def __setup_logging(self):
+        self.logfile_path = (
+            (Path(__file__).parent.parent)
+            / "logs"
+            / f"comfy_client_{time.strftime('%Y-%m-%d_%H:%M:%S')}.log"
+        )
+        self.logfile_path.parent.mkdir(parents=True, exist_ok=True)
+        formatter = logging.Formatter(
+            "[%(asctime)s] [%(levelname)s]"
+            + f" [Client {self.client_id_truncated}] "
+            + "%(message)s",
+            datefmt="%H:%M:%S",
+        )
+        filehandler = logging.FileHandler(self.logfile_path)
+        filehandler.setFormatter(formatter)
+        self.logger.addHandler(filehandler)
+
+        streamhandler = logging.StreamHandler()
+        streamhandler.setFormatter(formatter)
+        self.logger.addHandler(streamhandler)

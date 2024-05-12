@@ -10,11 +10,10 @@ COMFY_PATH = Path("/home/user/ComfyUI")
 OUTPUT_DIRECTORY = COMFY_PATH / "output"
 INPUT_DIRECTORY = COMFY_PATH / "input"
 SERVER_URL = "http://localhost"
-MAX_CONNECT_ATTEMPTS = 25
+MAX_CONNECT_ATTEMPTS = 25  # Increase for slow systems
 WORKFLOW_NAME = "my_workflow"
 WORKFLOW_TEMPLATE_PATH = COMFY_PATH / "workflows" / "template.json"
 
-from src.dev_constants import *
 
 def main():
     server = ComfyServer(

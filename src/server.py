@@ -16,16 +16,13 @@ class ComfyServer:
       python_path (Path): The path to the Python executable.
       server_url (str): The URL of the server. Set to http://localhost if running on the same machine.
       port (int): The port number to run the server on. Iterate if running multiple server processes. Defaults to 8188.
+      log_level (int): The logging level (verbosity). Defaults to logging.DEBUG.
 
     Attributes:
-      comfy_launcher_target (Path): The path to the Comfy launcher target.
-      logfile_path (Path): The path to the log file.
-      log_stream (File): The log file stream.
       server_process (subprocess.Popen): The server process.
       pid (int): The process ID of the server process.
 
     Methods:
-      log: Logs a message.
       start: Starts the Comfy server.
       kill: Stops the Comfy server.
     """
@@ -38,6 +35,7 @@ class ComfyServer:
         python_path: Path,
         server_url: str,
         port: int = 8188,
+        log_level: int = logging.DEBUG,
     ):
         self.output_directory = output_directory
         self.input_directory = input_directory
@@ -49,26 +47,15 @@ class ComfyServer:
         self.server_process = None
         self.log_stream = None
         self.pid = None
-        self.comfy_launcher_target = comfy_path / "main.py"
+        self.__comfy_launcher_target = comfy_path / "main.py"
 
+        self.logger = logging.getLogger("Server")
+        self.logger.setLevel(log_level)
         self.__setup_logging()
-        self.log(
+        self.logger.debug(
             "This is the command that will be used to start the ComfyUI server process:\n"
             + f"{' '.join(self.__get_comfy_cli_args())}\n"
         )
-
-    def log(self, *args, **kwargs):
-        """
-        Logs a message to the log file.
-
-        Args:
-          *args: The message to log.
-          **kwargs: Additional keyword arguments to pass to the logging function.
-
-        Returns:
-          None
-        """
-        logging.info(*args, **kwargs)
 
     def start(self):
         """
@@ -86,9 +73,11 @@ class ComfyServer:
         """
         try:
             self.__launch_process()
-            self.log("Server started\n")
+            self.logger.info(
+                self.__prefix_log_msg(f"Server started on port {self.port}")
+            )
         except Exception as e:
-            self.log(f"Error starting comfy server: {e}")
+            self.logger.info(self.__prefix_log_msg(f"Error starting comfy server: {e}"))
             self.kill()
 
     def kill(self):
@@ -108,7 +97,7 @@ class ComfyServer:
             log_msg = "Disconnect Attempt: No ComfyUI server process to kill"
         # Close the log stream before logging from separate process
         self.__close_log_stream()
-        self.log(log_msg)
+        self.logger.info(self.__prefix_log_msg(log_msg))
 
     def __get_comfy_cli_args(self):
         """
@@ -121,7 +110,7 @@ class ComfyServer:
         """
         return [
             str(self.python_path),
-            str(self.comfy_launcher_target),
+            str(self.__comfy_launcher_target),
             "--port",
             str(self.port),
             "--output-directory",
@@ -132,29 +121,12 @@ class ComfyServer:
             "--disable-metadata",
         ]
 
-    def __setup_logging(self):
-        self.logfile_path = (
-            (Path(__file__).parent.parent)
-            / "logs"
-            / f"comfy_server_{time.strftime('%Y-%m-%d_%H:%M:%S')}.log"
-        )
-        self.logfile_path.parent.mkdir(parents=True, exist_ok=True)
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="[Server Process %(process)d] [%(asctime)s] [%(levelname)s] %(message)s",
-            datefmt="%H:%M:%S",
-            handlers=[
-                logging.FileHandler(self.logfile_path),
-                logging.StreamHandler(),
-            ],
-        )
-
     def __set_log_stream(self):
         """
         Returns:
           File: The log file stream.
         """
-        self.log_stream = open(str(self.logfile_path), "a")
+        self.log_stream = open(str(self.__logfile_path), "a")
         return self.log_stream
 
     def __close_log_stream(self):
@@ -180,10 +152,12 @@ class ComfyServer:
         try:
             with request.urlopen(self.server_url) as f:
                 if f.status == 200:
-                    self.log(f"Server already running on port {self.port} - Connecting")
+                    self.logger.warning(
+                        f"Server already running on port {self.port} - Connecting"
+                    )
                     return
         except (error.URLError, error.HTTPError, KeyError):
-            self.log(
+            self.logger.info(
                 f"No existing server on port {self.port}. Starting detached server process"
             )
 
@@ -195,3 +169,31 @@ class ComfyServer:
             start_new_session=True,
         )
         self.pid = self.server_process.pid
+
+    def __prefix_log_msg(self, *args):
+        """
+        Args:
+          *args: The message to log.
+          **kwargs: Additional keyword arguments to pass to the logging function.
+        """
+        prefix = f"[Server {self.pid}] " if self.pid else "[Server Idle] "
+        return prefix + " ".join(map(str, args))
+
+    def __setup_logging(self):
+        self.__logfile_path = (
+            (Path(__file__).parent.parent)
+            / "logs"
+            / f"comfy_server_{time.strftime('%Y-%m-%d_%H:%M:%S')}.log"
+        )
+        self.__logfile_path.parent.mkdir(parents=True, exist_ok=True)
+        formatter = logging.Formatter(
+            "[%(asctime)s] [%(levelname)s] %(message)s",
+            datefmt="%H:%M:%S",
+        )
+        filehandler = logging.FileHandler(self.__logfile_path)
+        filehandler.setFormatter(formatter)
+        self.logger.addHandler(filehandler)
+
+        streamhandler = logging.StreamHandler()
+        streamhandler.setFormatter(formatter)
+        self.logger.addHandler(streamhandler)
