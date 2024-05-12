@@ -166,5 +166,4 @@ class ComfyServer:
             stdout=log,
             start_new_session=True,
         )
-        # make copy of the process id
         self.pid = self.server_process.pid
