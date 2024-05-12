@@ -14,6 +14,7 @@ MAX_CONNECT_ATTEMPTS = 25
 WORKFLOW_NAME = "my_workflow"
 WORKFLOW_TEMPLATE_PATH = COMFY_PATH / "workflows" / "template.json"
 
+from src.dev_constants import *
 
 def main():
     server = ComfyServer(

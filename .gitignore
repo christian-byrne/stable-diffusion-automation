@@ -1,7 +1,8 @@
 .python-version
 **/__pycache__/
-src/constants.py
+src/dev_constants.py
 logs/**/*.log
 output/**/*.png
 !output/**/ComfyUI_00001_.png
 *.log
+**/src/dev_constants.py
