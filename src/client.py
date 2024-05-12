@@ -1,9 +1,18 @@
 import json
 from urllib import request
-import websocket
 import uuid
 from pathlib import Path
 import time
+
+try:
+    import websocket
+except ImportError as e:
+    print(
+        "Please install the websocket-client package using",
+        "'pip install websocket-client'",
+        "or 'python3 -m pip install websocket-client'",
+    )
+    raise e
 
 
 class ComfyClient:
@@ -60,12 +69,12 @@ class ComfyClient:
 
         self.client_id = str(uuid.uuid4())
         self.__websocket = None
-
         self.logfile_path = None
+        self.log(f"New Client - ID: {self.client_id}")
 
     def log(self, *args, **kwargs):
         # Add your own logging logic
-        print(*args, **kwargs)
+        print(f"[Client {self.client_id}]", *args, **kwargs)
 
         if not self.logfile_path:
             self.logfile_path = (
@@ -74,7 +83,9 @@ class ComfyClient:
                 / f"comfy_client_{time.strftime('%Y-%m-%d_%H:%M:%S')}.log"
             )
             with open(self.logfile_path, "w") as f:
-                f.write(f"New Comfy Client Created with ID: {self.client_id}\n")
+                f.write(
+                    f"New Comfy Client Created at {time.strftime('%Y-%m-%d_%H:%M:%S')}\n"
+                )
 
         with open(self.logfile_path, "a") as f:
             print(*args, **kwargs, file=f)
@@ -105,7 +116,7 @@ class ComfyClient:
         for attempt in range(self.max_connect_attempts):
             try:
                 self.__websocket.connect(
-                    f"{self.server_url.replace('https', 'ws')}:{self.port}/ws?clientId={self.client_id}",
+                    f"{self.websock_url}/ws?clientId={self.client_id}",
                 )
             except ConnectionRefusedError:
                 self.log(
@@ -116,9 +127,8 @@ class ComfyClient:
 
             if self.__websocket.connected:
                 self.log(
-                    "Comfy server connection attempt",
-                    f"{attempt + 1}/{self.max_connect_attempts}:",
-                    "Succeeded - connection established",
+                    f"Connection Attempt {attempt + 1}/{self.max_connect_attempts}:",
+                    "Succeeded - Connection Established\n",
                 )
                 break
 
@@ -133,10 +143,14 @@ class ComfyClient:
             None
         """
         if self.is_connected():
-            self.log("Disconnecting Client from Comfy server")
+            self.log(
+                "Disconnecting Client from Comfy server\n"
+            )
             self.__websocket.close()
         else:
-            self.log("Disconnect Client Attempt: Client is already disconnected")
+            self.log(
+                "Disconnect Client Attempt: Client is already disconnected\n"
+            )
 
     def queue_workflow(self):
         """
@@ -164,7 +178,7 @@ class ComfyClient:
                 "%Mmin, %Ssec", time.gmtime(time.time() - start_time_epoch)
             )
             self.log(
-                f"Comfy server finished processing request at: {time.strftime('%I:%M%p')} (Time elapsed - {time_diff_formatted})"
+                f"ComfyUI Server finished processing request at: {time.strftime('%I:%M%p')} (Time elapsed - {time_diff_formatted})"
             )
 
         except Exception as e:
@@ -180,7 +194,7 @@ class ComfyClient:
 
     def __send_request(self):
         req = request.Request(
-            self.server_url + "/prompt", data=self.__get_request_data()
+            str(self.server_url) + "/prompt", data=self.__get_request_data()
         )
         resp = json.loads(request.urlopen(req).read())
         self.response_prompt_id = resp["prompt_id"]

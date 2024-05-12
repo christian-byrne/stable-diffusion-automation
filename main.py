@@ -4,16 +4,15 @@ from src.server import ComfyServer
 from src.client import ComfyClient
 from src.workflow_wrapper import ComfyAPIWorkflow
 
+
 PYTHON_PATH = Path("/usr/bin/python3")
-COMFY_PATH = Path("/home/c_byrne/tools/sd/sd-interfaces/ComfyUI")
-OUTPUT_DIRECTORY = Path("/home/c_byrne/tools/sd/sd-interfaces/ComfyUI/output")
-INPUT_DIRECTORY = Path("/home/c_byrne/tools/sd/sd-interfaces/ComfyUI/input")
+COMFY_PATH = Path("/home/user/ComfyUI")
+OUTPUT_DIRECTORY = COMFY_PATH / "output"
+INPUT_DIRECTORY = COMFY_PATH / "input"
 SERVER_URL = "http://localhost"
-MAX_CONNECT_ATTEMPTS = 10
+MAX_CONNECT_ATTEMPTS = 25
 WORKFLOW_NAME = "my_workflow"
-WORKFLOW_TEMPLATE_PATH = Path(
-    "/home/c_byrne/tools/sd/sd-interfaces/ComfyUI/workflows/template.json"
-)
+WORKFLOW_TEMPLATE_PATH = COMFY_PATH / "workflows" / "template.json"
 
 
 def main():
@@ -36,3 +35,12 @@ def main():
     )
     server.start()
     client.connect()
+
+    client.queue_workflow()
+
+    client.disconnect()
+    server.kill()
+
+
+if __name__ == "__main__":
+    main()

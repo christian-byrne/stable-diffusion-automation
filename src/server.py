@@ -48,16 +48,22 @@ class ComfyServer:
         self.port = port
 
         self.server_url = f"{server_url}:{port}"
+        self.server_process = None
+        self.pid = None
         self.comfy_launcher_target = comfy_path / "main.py"
 
         self.logfile_path = None
         self.log(
-            f"This is the command that will be used to start comfy: {self.__get_comfy_cli_args()}"
+            "This is the command that will be used to start the ComfyUI server process:\n"
+            + f"{' '.join(self.__get_comfy_cli_args())}\n"
         )
 
     def log(self, *args, **kwargs):
         # Add your own logging logic
-        print(*args, **kwargs)
+        if self.pid:
+            print(f"[Server Process {self.pid}]", *args, **kwargs)
+        else:
+            print(*args, **kwargs)
 
         if not self.logfile_path:
             self.logfile_path = (
@@ -89,7 +95,7 @@ class ComfyServer:
         """
         try:
             self.__launch_process()
-            self.log("Comfy server started")
+            self.log("Server started\n")
         except Exception as e:
             self.log(f"Error starting comfy server: {e}")
             self.kill()
@@ -105,9 +111,9 @@ class ComfyServer:
         if self.server_process:
             self.server_process.terminate()
             self.server_process.wait()
-            self.log("Comfy Process: server stopped")
+            self.log("Server stopped")
         else:
-            self.log("Comfy Process Disconnect Attempt: No Comfy server to stop")
+            self.log("Disconnect Attempt: No ComfyUI server process to kill")
 
     def __get_comfy_cli_args(self):
         """
@@ -146,16 +152,19 @@ class ComfyServer:
         try:
             with request.urlopen(self.server_url) as f:
                 if f.status == 200:
-                    self.log("Comfy server status: Already running. Connecting")
+                    self.log(f"Server already running on port {self.port} - Connecting")
                     return
         except (error.URLError, error.HTTPError, KeyError):
             self.log(
-                "Comfy server status: Not running. Starting new server in detached process"
+                f"No existing server on port {self.port}. Starting detached server process"
             )
 
+        log = open(str(self.logfile_path), "a")
         self.server_process = subprocess.Popen(
             self.__get_comfy_cli_args(),
-            stdout=self.logfile_path,
-            stderr=self.logfile_path,
+            stderr=log,
+            stdout=log,
             start_new_session=True,
         )
+        # make copy of the process id
+        self.pid = self.server_process.pid
