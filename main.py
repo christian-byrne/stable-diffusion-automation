@@ -1,4 +1,5 @@
 from pathlib import Path
+import logging
 
 from src.server import ComfyServer
 from src.client import ComfyClient
@@ -23,6 +24,7 @@ def main():
         python_path=PYTHON_PATH,
         server_url=SERVER_URL,
         port=8188,
+        log_level=logging.DEBUG,
     )
     client = ComfyClient(
         workflow=ComfyAPIWorkflow(
@@ -32,6 +34,7 @@ def main():
         server_url=SERVER_URL,
         max_connect_attempts=MAX_CONNECT_ATTEMPTS,
         port=8188,
+        log_level=logging.DEBUG,
     )
     server.start()
     client.connect()

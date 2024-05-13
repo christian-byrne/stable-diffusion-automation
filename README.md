@@ -12,6 +12,7 @@ Gladly welcome fork and PR for any improvements or bug fixes.Have only tested on
 - [Example Output](#example-output)
 - [Params for Client, Server, and Workflow Classes](#params-for-client-server-and-workflow-classes)
 - [Workflows](#workflows)
+- [TODO](#todo)
 
 
 ## Usage
@@ -35,43 +36,44 @@ Gladly welcome fork and PR for any improvements or bug fixes.Have only tested on
 ## Example Output
 
 ```
-This is the command that will be used to start the ComfyUI server process:
-~/.pyenv/versions/3.10.6/bin/python3 ~/sd/sd-interfaces/ComfyUI/main.py --port 8188 --output-directory ~/sd/comfy-ui-automation/output --input-directory ~/sd/sd-interfaces/ComfyUI/input --disable-auto-launch --disable-metadata
+[16:50:56] [DEBUG] This is the command that will be used to start the ComfyUI server process:
+~/.pyenv/versions/3.10.6/bin/python3 ~/sd/sd-interfaces/ComfyUI/main.py --port 8188 --output-directory ~/comfy-ui-automation/output --input-directory ~/sd/sd-interfaces/ComfyUI/input --disable-auto-launch --disable-metadata
 
-Created Copy of Workflow Template in ~/stable-diffusion-automation/workflows
+[16:50:56] [INFO] [Workflow - my_workflow] Created Copy of Workflow Template in ~/comfy-ui-automation/workflows
 
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] New Client - ID: b20b9d51-bf76-4fc7-9c63-356dd92e0d67
+[16:50:56] [INFO] [Client 004c5d63] New Comfy Client Created at 2024-05-12_16:50:56
 
-No existing server on port 8188. Starting detached server process
-[Server Process 195800] Server started
+[16:50:56] [INFO] No existing server on port 8188. Starting detached server process
+[16:50:56] [INFO] [Server 64668] Server started on port 8188
 
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Connection Attempt 1/12: Failed - Connection Refused
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Connection Attempt 2/12: Failed - Connection Refused
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Connection Attempt 3/12: Failed - Connection Refused
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Connection Attempt 4/12: Failed - Connection Refused
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Connection Attempt 5/12: Failed - Connection Refused
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Connection Attempt 6/12: Failed - Connection Refused
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Connection Attempt 7/12: Failed - Connection Refused
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Connection Attempt 8/12: Failed - Connection Refused
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Connection Attempt 9/12: Succeeded - Connection Established
+[16:50:56] [DEBUG] [Client 004c5d63] Connection Attempt 1/12: Failed - Connection Refused
+[16:50:57] [DEBUG] [Client 004c5d63] Connection Attempt 2/12: Failed - Connection Refused
+[16:50:58] [DEBUG] [Client 004c5d63] Connection Attempt 3/12: Failed - Connection Refused
+[16:50:59] [DEBUG] [Client 004c5d63] Connection Attempt 4/12: Failed - Connection Refused
+[16:51:00] [DEBUG] [Client 004c5d63] Connection Attempt 5/12: Failed - Connection Refused
+[16:51:01] [DEBUG] [Client 004c5d63] Connection Attempt 6/12: Failed - Connection Refused
 
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Queueing Workflow at: 05:37PM
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] {'exec_info': {'queue_remaining': 0}}
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] {'exec_info': {'queue_remaining': 1}}
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] {'exec_info': {'queue_remaining': 1}}
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Executing Node: Load Checkpoint
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Executing Node: CLIP Text Encode (Positive Prompt)
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Executing Node: CLIP Text Encode (Negative Prompt)
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Executing Node: Empty Latent Image
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Executing Node: KSampler
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Executing Node: VAE Decode
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Executing Node: Save Image
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] {'exec_info': {'queue_remaining': 0}}
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] ComfyUI Server finished processing request at: 05:37PM (Time elapsed - 00min, 02sec)
+[16:51:02] [INFO] [Client 004c5d63] Connection Attempt 7/12: Succeeded - Connection Established
+[16:51:02] [INFO] [Client 004c5d63] Queueing Workflow at: 04:51PM
 
-[Client b20b9d51-bf76-4fc7-9c63-356dd92e0d67] Disconnect Client Attempt: Client is already disconnected
+[16:51:02] [DEBUG] [Client 004c5d63] {'exec_info': {'queue_remaining': 0}}
+[16:51:02] [DEBUG] [Client 004c5d63] {'exec_info': {'queue_remaining': 1}}
+[16:51:02] [DEBUG] [Client 004c5d63] {'exec_info': {'queue_remaining': 1}}
 
-[Server Process 195800] Server stopped
+[16:51:02] [INFO] [Client 004c5d63] Executing Node: Load Checkpoint
+[16:51:02] [INFO] [Client 004c5d63] Executing Node: CLIP Text Encode (Prompt)
+[16:51:03] [INFO] [Client 004c5d63] Executing Node: CLIP Text Encode (Prompt)
+[16:51:03] [INFO] [Client 004c5d63] Executing Node: Empty Latent Image
+[16:51:03] [INFO] [Client 004c5d63] Executing Node: KSampler
+[16:51:04] [INFO] [Client 004c5d63] Executing Node: VAE Decode
+[16:51:04] [INFO] [Client 004c5d63] Executing Node: Save Image
+
+[16:51:04] [DEBUG] [Client 004c5d63] {'exec_info': {'queue_remaining': 0}}
+
+[16:51:04] [INFO] [Client 004c5d63] ComfyUI Server finished processing request at: 04:51PM (Time elapsed - 00min, 02sec)
+[16:51:04] [INFO] [Client 004c5d63] Disconnect Client Attempt: Client is already disconnected
+
+[16:51:04] [INFO] [Server 64668] Server stopped
 ```
 
 ## Params for Client, Server, and Workflow Classes
@@ -108,3 +110,10 @@ Make sure to use the `Save (API Formatted)` button after you've checked `Enable 
 
 Maybe you run this program in the backend of a webapp, and you want to edit node input values based on user input. Or maybe you have a program that must change node input values depending on the output of another program. The wrapper also helps provide meaningful log/error messages for fixing problems that are otherwise hard to debug.
 
+
+## TODO
+
+- System testing
+- Server/container testing
+- Compress logs after limit reached
+- More Workflow methods for dynamically adjusting values
