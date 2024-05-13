@@ -1,8 +1,8 @@
 Automate Stable Diffusion tasks by starting a detached ComfyUI process and sending commands to its API via a websocket. Start as many clients and servers as desired using different ports and system processes. Load, edit, and save workflows dynamically. Can be used for the backend of a webapp that uses stable diffusion or simply for automation.
 
-If doing iterative/loopback things, see ***NOTE*** about setting the `INPUT_DIRECTORY` in [Constants](#constants) section.
+If doing iterative/loopback things, see ***NOTE*** about setting the `INPUT_DIRECTORY` in the [Params for Client, Server, and Workflow Classes](#params-for-client-server-and-workflow-classes) section.
 
-Gladly welcome fork and PR for any improvements or bug fixes.Have only tested on Ubuntu 23.10 + Nvidia GPU + python3.10.6 and on a linux server.
+Gladly welcome fork/PR for any improvements or bug fixes. Have only tested on Ubuntu23 + python3.10.6/python3.11 and on a linux server.
 
 --------
 
